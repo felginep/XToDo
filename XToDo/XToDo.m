@@ -184,12 +184,44 @@ XToDo* sharedPlugin = nil;
 }
 - (void)insertComment:(NSString*)cmt
 {
+    NSString * comment = [NSString stringWithFormat:@"%@ (%@) %@", cmt, [self _formattedUserName], [self _formattedDate]];
     IDESourceCodeEditor* editor = [XToDoModel currentEditor];
     NSTextView* textView = editor.textView;
     if (textView) {
-        [textView insertText:cmt];
+        [textView insertText:comment];
         [textView insertText:@" "];
     }
 }
+
+#pragma mark - Private
+
+- (NSString *)_formattedDate {
+    NSDateFormatter * dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateFormat = @"dd/MM/yyyy";
+    return [dateFormatter stringFromDate:[NSDate date]];
+}
+
+- (NSString *)_formattedUserName {
+    return [[self _runCommand:@"git config user.name"] stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+}
+
+- (NSString *)_runCommand:(NSString *)command {
+    NSTask * task = [[NSTask alloc] init];
+    [task setLaunchPath:@"/bin/sh"];
+
+    NSArray * arguments = @[ @"-c", command ];
+    [task setArguments:arguments];
+
+    NSPipe * pipe = [NSPipe pipe];
+    [task setStandardOutput:pipe];
+
+    NSFileHandle * file = [pipe fileHandleForReading];
+
+    [task launch];
+
+    NSData * data = [file readDataToEndOfFile];
+    return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+}
+
 
 @end
